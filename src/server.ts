@@ -1,5 +1,5 @@
 import { createServer, IncomingMessage, ServerResponse } from "node:http";
-import { handleCreateBooking } from "./bookings/controllers/bookingController.ts";
+import { handleCreateBooking } from "./composition-root.ts";
 
 const PORT = Number(process.env.PORT ?? 3000);
 
