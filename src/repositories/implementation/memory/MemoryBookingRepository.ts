@@ -4,17 +4,17 @@ import type { BookingRepository } from "../../BookingRepository.ts";
 export class MemoryBookingRepository implements BookingRepository {
   private readonly bookings = new Map<string, Booking>();
 
-  async hasOverlap(
+  async findOverlapping(
     roomId: string,
     startsAt: Date,
     endsAt: Date,
-  ): Promise<boolean> {
+  ): Promise<Booking | null> {
     for (const b of this.bookings.values()) {
       if (b.roomId === roomId && b.startsAt < endsAt && startsAt < b.endsAt) {
-        return true;
+        return b;
       }
     }
-    return false;
+    return null;
   }
 
   async countFutureByUser(userId: string): Promise<number> {

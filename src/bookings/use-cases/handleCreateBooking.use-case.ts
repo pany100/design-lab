@@ -2,6 +2,11 @@ import type { EmailService } from "../../external/services/EmailService.ts";
 import type { BookingRepository } from "../../repositories/BookingRepository.ts";
 import type { RoomRepository } from "../../repositories/RoomRepository.ts";
 import { Booking } from "../entities/Booking.ts";
+import {
+  OverlapError,
+  RoomNotFoundError,
+  UserBookingLimitError,
+} from "../errors.ts";
 import type { CreateBookingInput } from "../schema/createBookingInput.ts";
 
 export class HandleCreateBookingUseCase {
@@ -11,7 +16,7 @@ export class HandleCreateBookingUseCase {
     private readonly emailService: EmailService,
   ) {}
 
-  async execute(dto: CreateBookingInput): Promise<void> {
+  async execute(dto: CreateBookingInput): Promise<Booking> {
     const booking = Booking.create(
       {
         userId: dto.userId,
@@ -24,23 +29,23 @@ export class HandleCreateBookingUseCase {
 
     const room = await this.roomRepository.findById(dto.roomId);
     if (!room) {
-      throw new Error("room_not_found");
+      throw new RoomNotFoundError();
     }
 
     const futureCount = await this.bookingRepository.countFutureByUser(
       booking.userId,
     );
     if (futureCount >= 3) {
-      throw new Error("user_booking_limit");
+      throw new UserBookingLimitError();
     }
 
-    const overlap = await this.bookingRepository.hasOverlap(
+    const overlap = await this.bookingRepository.findOverlapping(
       booking.roomId,
       booking.startsAt,
       booking.endsAt,
     );
     if (overlap) {
-      throw new Error("overlap");
+      throw new OverlapError(overlap.id);
     }
 
     await this.bookingRepository.save(booking);
@@ -50,5 +55,7 @@ export class HandleCreateBookingUseCase {
       subject: "Booking confirmation",
       body: `Booking ${booking.id} for room ${booking.roomId} from ${booking.startsAt.toISOString()} to ${booking.endsAt.toISOString()} confirmed.`,
     });
+
+    return booking;
   }
 }

@@ -1,4 +1,8 @@
 import { randomUUID } from "node:crypto";
+import {
+  InvalidBookingRangeError,
+  PastBookingRangeError,
+} from "../errors.ts";
 
 export type BookingProps = {
   userId: string;
@@ -19,10 +23,10 @@ export class Booking {
 
   static create(props: BookingProps, now: Date): Booking {
     if (props.endsAt <= props.startsAt) {
-      throw new Error("invalid_range");
+      throw new InvalidBookingRangeError();
     }
     if (props.startsAt < now) {
-      throw new Error("past_range");
+      throw new PastBookingRangeError();
     }
     return new Booking(
       randomUUID(),
