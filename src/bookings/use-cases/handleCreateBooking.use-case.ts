@@ -1,4 +1,3 @@
-import type { EmailService } from "../../external/services/EmailService.ts";
 import type { BookingRepository } from "../../repositories/BookingRepository.ts";
 import type { RoomRepository } from "../../repositories/RoomRepository.ts";
 import { Booking } from "../entities/Booking.ts";
@@ -7,13 +6,14 @@ import {
   RoomNotFoundError,
   UserBookingLimitError,
 } from "../errors.ts";
+import type { BookingNotifier } from "../notifiers/BookingNotifier.ts";
 import type { CreateBookingInput } from "../schema/createBookingInput.ts";
 
 export class HandleCreateBookingUseCase {
   constructor(
     private readonly roomRepository: RoomRepository,
     private readonly bookingRepository: BookingRepository,
-    private readonly emailService: EmailService,
+    private readonly bookingNotifier: BookingNotifier,
   ) {}
 
   async execute(dto: CreateBookingInput): Promise<Booking> {
@@ -50,10 +50,11 @@ export class HandleCreateBookingUseCase {
 
     await this.bookingRepository.save(booking);
 
-    await this.emailService.send({
-      to: booking.userId,
-      subject: "Booking confirmation",
-      body: `Booking ${booking.id} for room ${booking.roomId} from ${booking.startsAt.toISOString()} to ${booking.endsAt.toISOString()} confirmed.`,
+    this.bookingNotifier.notifyBookingCreated(booking).catch((err) => {
+      console.error("Failed to notify booking created", {
+        bookingId: booking.id,
+        err,
+      });
     });
 
     return booking;
